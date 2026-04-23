@@ -12,7 +12,6 @@
         <link rel="stylesheet" href="css/qgis2web.css">
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
         <link rel="stylesheet" href="css/leaflet.photon.css">
-		<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
         <style>
         html, body, #map {
             width: 100%;
@@ -28,7 +27,6 @@
         </div>
         <script src="js/qgis2web_expressions.js"></script>
         <script src="js/leaflet.js"></script>
-		<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
         <script src="js/L.Control.Layers.Tree.min.js"></script>
         <script src="js/L.Control.Locate.min.js"></script>
         <script src="js/multi-style-layer.js"></script>
@@ -383,28 +381,49 @@
             collapsed: true,
         });
         lay.addTo(map);
-			
 		var searchMarker;
+		var SearchControl = L.Control.extend({
+    		options: { position: 'topleft' },
 
-		var geocoder = L.Control.geocoder({
-    		defaultMarkGeocode: false
-		}).addTo(map);
-
-		geocoder.on('markgeocode', function(e) {
-    		var center = e.geocode.center;
-
-    		if (searchMarker) {
-        		map.removeLayer(searchMarker);
-    }
-
-    		searchMarker = L.marker(center).addTo(map);
-
-    		setTimeout(function() {
-        		map.flyTo(center, 16, {
-            		animate: false
-        		});
-    		}, 500);
+    		onAdd: function(map) {
+		        var div = L.DomUtil.create('div', 'leaflet-bar');
+		        div.style.background = 'white';
+		        div.style.padding = '6px';
+		
+		        div.innerHTML = `
+		            <input id="addressSearch" type="text" placeholder="Search address"
+		                style="width:180px; padding:4px;">
+		            <button id="addressSearchBtn" style="padding:4px;">Go</button>
+		        `;
+		
+		        L.DomEvent.disableClickPropagation(div);
+		        return div;
+   			 }
 		});
+
+		map.addControl(new SearchControl());
+		
+		document.getElementById('addressSearchBtn').onclick = function() {
+    		var query = document.getElementById('addressSearch').value;
+
+   		 	fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query))
+		        .then(response => response.json())
+		        .then(data => {
+		            if (data.length > 0) {
+		                var lat = parseFloat(data[0].lat);
+		                var lon = parseFloat(data[0].lon);
+		
+		                if (searchMarker) {
+		                    map.removeLayer(searchMarker);
+		                }
+		
+		                searchMarker = L.marker([lat, lon]).addTo(map);
+		                map.setView([lat, lon], 16);
+		            } else {
+		                alert('Address not found.');
+		            }
+		        });
+		};
         setBounds();
         resetLabels([layer_Municipalities_2]);
         map.on("zoomend", function(){
