@@ -384,16 +384,26 @@
         });
         lay.addTo(map);
 			
+		var searchMarker;
+
 		var geocoder = L.Control.geocoder({
-   			defaultMarkGeocode: false
+    		defaultMarkGeocode: false
 		}).addTo(map);
 
 		geocoder.on('markgeocode', function(e) {
-		    var center = e.geocode.center;
-		    L.marker(center).addTo(map);
-		    setTimeout(function() {
-		        map.setView(center, 16);
-		    }, 100);
+    		var center = e.geocode.center;
+
+    		if (searchMarker) {
+        		map.removeLayer(searchMarker);
+    }
+
+    		searchMarker = L.marker(center).addTo(map);
+
+    		setTimeout(function() {
+        		map.flyTo(center, 16, {
+            		animate: false
+        		});
+    		}, 500);
 		});
         setBounds();
         resetLabels([layer_Municipalities_2]);
